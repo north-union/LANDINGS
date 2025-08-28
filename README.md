@@ -1,5 +1,3 @@
-
-
 ## 1) Структура
 1. 	/{index.php, assets/css, assets/js, assets/img}
 2. 	Только main.js и date.js в js-папке
