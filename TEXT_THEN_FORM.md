@@ -1,10 +1,11 @@
 
 # "Text Then Form" Guide
 
-В этом файле, краткий гайд на то, как мигрироваь с текущей конфигурации лендингов группы **VSL**, к тому коду, что мы ожидаем.
+В этом файле, краткий гайд на то, как мигрироваь с текущей конфигурации лендингов группы **Text Then Form**, к тому коду, что мы ожидаем.
 
 
 <img width="1624" height="1011" alt="image" src="https://github.com/user-attachments/assets/c0494881-882e-4b68-9249-72ccf9b621a1" />
+<img width="1624" height="1011" alt="image" src="https://github.com/user-attachments/assets/05458966-b689-48ed-960a-1b1c12975044" />
 
 
 > [!IMPORTANT]
