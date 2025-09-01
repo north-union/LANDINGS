@@ -193,6 +193,76 @@ if (video) {
 }
 ```
 
+5. Учитывая, что в каждом лендинге своя работа с видео и его ивентами, ниже пример рабочего хендлера для видео, которое отвечает за скрытие, отображение видео и работу таймера, **важно**: если у вас все равно работает хендлинг видео, то в любом случае перепишите код на данный подход:
+```js
+const sectionForm = document.querySelector(".section-form");
+
+function createTimer(element) {
+    const startTime = Date.now();
+    const endTime = startTime + 10 * 60 * 1000;
+    function updateTimer() {
+        const remainingTime = endTime - Date.now();
+        const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
+        const seconds = Math.floor((remainingTime / 1000) % 60);
+        const formattedTime = `${minutes
+            .toString()
+            .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+        element.textContent = formattedTime;
+        if (remainingTime <= 0) {
+            clearInterval(timerInterval);
+            element.textContent = "00:00";
+        }
+    }
+    const timerInterval = setInterval(updateTimer, 100);
+    updateTimer();
+}
+const timerElements = document.querySelectorAll(".my-timer-now");
+
+
+let video = document.querySelector("video");
+
+if (video) {
+    console.log("video найден при загрузке:", video);
+    setupVideoEvents(video);
+} else {
+    const observer = new MutationObserver(function(mutationsList) {
+        mutationsList.forEach(function(mutation) {
+            if (mutation.type === "childList") {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.tagName === "VIDEO") {
+                        console.log("video было добавлено:", node);
+                        video = node;
+                        setupVideoEvents(video);
+                    }
+                });
+            }
+        });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function setEndVideo() {
+    sectionForm.classList.remove("none");
+    timerElements.forEach((element) => {
+        createTimer(element);
+    });
+    const orderElement = document.getElementById("order");
+    if (orderElement) {
+        orderElement.scrollIntoView({ behavior: "smooth" });
+    }
+}
+
+function setupVideoEvents(video) {
+    video.addEventListener("ended", function() {
+        setEndVideo();
+    });
+}
+```
+
+6. **Важно**, в консоли, у вас возможно будет ошибка `Uncaught ReferenceError: wrapper is not defined` - не обращайте внимание, это ошибка подгружаемого скрипта, но если вы заметили что у вас в коде, есть переменная с названием `wrapper`, пожалуйста, переименуйте ее **и дайте мне знать, обязательно.** Такая необходимость связана с тем, что некоторые лендинги обращаются не к своим локальным переменным, а к переменным подгружаемый из скрипта — это безусловно плохая практика, но работаем с тем, что есть.
+<img width="1624" height="1011" alt="image" src="https://github.com/user-attachments/assets/c05de423-e148-4a18-aa75-1f334412d0c5" />
+
+
 ## 4. Работа с формой и отправка запроса к PP
 
 В лендингах отправка формы реализована по разному, но давайте попробуем все объединить в один подход:
@@ -206,12 +276,12 @@ if (video) {
 ```php
 <?php
 
-$apiKey = 'AC1XNexHsXaInMoGM8ZTsteba8XpZGZ10';
+$apiKey = '###';
 $offer_id = 14612;
 $stream_hid = 'PQnSKqMg';
 $country = 'EG';
 $timezone_int = '4';
-$apiUrl = 'http://api.cpa.tl/api/lead/send';
+$apiUrl = '###';
 $name = $_POST['name'];
 $phone = $_POST['phone'];
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -265,45 +335,84 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 ```
 
-
 ### Стало:
 ```php
-function sendLead(array $data, string $apiUrl): array {
-    $ch = curl_init($apiUrl);
-    curl_setopt_array($ch, [
-        CURLOPT_POST            => true,
-        CURLOPT_POSTFIELDS      => http_build_query($data),
-        CURLOPT_RETURNTRANSFER  => true,
-        CURLOPT_FOLLOWLOCATION  => true,
-        CURLOPT_CONNECTTIMEOUT  => 5,   // таймаут соединения
-        CURLOPT_TIMEOUT         => 15,  // общий таймаут
-        CURLOPT_HTTPHEADER      => ['Content-Type: application/x-www-form-urlencoded'],
-        CURLOPT_SSL_VERIFYPEER  => true,
-        CURLOPT_SSL_VERIFYHOST  => 2,
-    ]);
+<?php
 
-    $body = curl_exec($ch);
-    $errno = curl_errno($ch);
-    $error = curl_error($ch);
-    $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+$apiUrl = '###';
+$apiKey = '###';
+$offer_id = 14612;
+$stream_hid = 'PQnSKqMg';
+$country = 'EG';
+$timezone_int = '4';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data = [
+        'key'         => $apiKey,
+        'id'          => microtime(true),
+        'offer_id'    => $offer_id,
+        'stream_hid'  => $stream_hid,
+        'name'        => $_POST['name'],
+        'phone'       => $_POST['phone'],
+        'comments'    => $_POST['comments'],
+        'address'     => $_POST['address'],
+        'country'     => $country,
+        'tz'          => $timezone_int,
+        'web_id'      => '',
+        'ip_address'  => $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['REMOTE_ADDR'],
+        'user_agent'  => $_SERVER['HTTP_USER_AGENT'],
+        'sub1'        => $_POST['sub1'],
+        'sub2'        => $_POST['sub2'],
+        'sub3'        => $_POST['sub3'],
+        'sub4'        => $_POST['sub4'],
+        'sub5'        => $_POST['sub5'],
+    ];
+
+    $ch = curl_init($apiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+    $response = curl_exec($ch);
     curl_close($ch);
 
-    if ($errno) {
-        throw new RuntimeException("cURL error: $error", $errno);
-    }
-    if ($status < 200 || $status >= 300) {
-        throw new RuntimeException("HTTP $status: $body");
-    }
-
-    $json = json_decode($body, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        throw new RuntimeException("Invalid JSON: $body");
-    }
-    return $json;
+    $result = json_decode($response);
+    header('Location: success.php?id_zayavki=' . $result->id);
+    exit;
 }
 ```
 
 
+> [!CAUTION]
+> Помните, что данный гайд — обслуживает персональный кейс. Отвественность за работоспособность лендинга в любом случае лежит на том, кто заливает код в прод. Поэтому обязательно, проверьте запросы подняв локальный эндпоинт. Обязательно, тк запросы к PP не нужно заливать на прод, заранее не протестив.
+
+<br />
+
 ## 5. Даты
 
-// Дописать это
+Оставьте работу с датами как есть — если она уже работает, не трогайте ее.
+
+<br />
+<br />
+
+## Обязательные требования, внезависимости от типа лендинга:
+
+> [!CAUTION]
+> Ваш лендинг может полностью соответствовать рекомендациям выше, но чеклист ниже - обязателен к ознакомлению, убедитесь что все соблюдено.
+
+
+1. Никаких ключей в клиентской части (HTML, JS) — только PHP.
+2. Никаких странных файлов в директории: `.DS_Store`, `log.txt` и прочие файлы, оставьте только служебные файлы, которые были упомянуты в первом пункте.
+3. [Никаких `eval` и подобных функций](https://docs.keitaro.io/ru/landing-pages-and-offers/landing-page-local.html?h=eval).
+4. [При загрузке дополнительных скриптов в include() и require() используется полный путь до файла (например, с dirname(__FILE__))](https://docs.keitaro.io/ru/landing-pages-and-offers/landing-page-local.html?h=require).
+5. [Удалите теги `base` в вашем HTML коде](https://docs.keitaro.io/ru/landing-pages-and-offers/landing-page-local.html?h=require#%D1%82%D1%80%D0%B5%D0%B1%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F-%D0%BA-%D0%BB%D0%B5%D0%BD%D0%B4%D0%B8%D0%BD%D0%B3%D0%B0%D0%BC).
+
+
+
+
+
+<br />
+<br />
+
+## Feedback
+1. Если вы понимаете, что пункт инструкции **не работает** - обязательно составьте pull request прямо в этот репозиторий.
+2. Если вы понимаете, что пункт инструкции **не оптимален** - обязательно составьте pull request прямо в этот репозиторий.
