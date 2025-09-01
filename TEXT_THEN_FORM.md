@@ -218,7 +218,6 @@
             ├── seleb_default.jpg
             ├── sosud-4.jpg
     ├── _preview.png
-    ├── .DS_Store
     ├── history-back.js
     ├── index.css
     ├── index.js
@@ -286,138 +285,7 @@
     </head>
     ```
 
-
-## 2. Изменение плеера
-
-С недавних пор, у нас появился `videomaxhost.cloud` плеер, поэтому нам необходимо мигрировать с текущего VTube на наш плеер, если вы пропустили момент ознакомления, [то рекоммендую посмотреть это видео](https://github.com/north-union/README).
-
-### Было:
-
-<img width="1624" height="1011" alt="image" src="https://github.com/user-attachments/assets/9081820f-365e-4557-a936-091a22152bff" />
-
-### Стало:
-
-<img width="1624" height="1011" alt="image" src="https://github.com/user-attachments/assets/ced384fa-5ac8-496e-9641-acd5e4980cc9" />
-
-
-1. Удалить текущую интеграцию и изображение-превью:
-```html
-<div id="vid_687a468bea27916e7c73e594" style="position: relative; width: 100%; padding: 56.25% 0 0;"> <img id="thumb_687a468bea27916e7c73e594" src="https://images.converteai.net/582790c2-e21b-4886-af13-d25e7060df14/players/687a468bea27916e7c73e594/thumbnail.jpg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block;" alt="thumbnail">
-    <div id="backdrop_687a468bea27916e7c73e594" style=" -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); position: absolute; top: 0; height: 100%; width: 100%; ">
-    </div>
-</div>
-
-<script type="text/javascript" id="scr_687a468bea27916e7c73e594">
-    var s = document.createElement("script");
-    s.src = "https://scripts.converteai.net/582790c2-e21b-4886-af13-d25e7060df14/players/687a468bea27916e7c73e594/player.js", s.async = !0, document.head.appendChild(s);
-</script>
-
-<img src="img/news-logos.webp" class="img_adv">
-```
-2. Подключите скрипт для подключения к `videomaxhost.cloud`:
-```html
- <script type="text/javascript" src="https://player.videomaxhost.cloud/embed.js"></script>
-```
-3. Подключите виджет:
-```html
-<div class="embedpvideo" data-videoid="33559eb3-23c9-49c8-80fb-3e2fba32f8cd"></div>
-```
-4. Если вы видите, что видео не подгрузилось или не отображается — значит ваш текущий JS файл содержит ту логику, которая была совместима ТОЛЬКО с VTube. Учитывая, что лендингов слишком много, а реализаций еще больше — то вот, минимальный flow для работы видео:
-```js
-let video = document.querySelector("video");
-
-if (video) {
-    console.log("video найден при загрузке:", video);
-    setupVideoEvents(video);
-} else {
-    const observer = new MutationObserver((mutationsList) => {
-        mutationsList.forEach((mutation) => {
-            if (mutation.type === "childList") {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.tagName === "VIDEO") {
-                        video = node;
-                        setupVideoEvents(video);
-                        observer.disconnect(); // Останавливаем наблюдатель
-                    }
-                });
-            }
-        });
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-}
-```
-
-5. Учитывая, что в каждом лендинге своя работа с видео и его ивентами, ниже пример рабочего хендлера для видео, которое отвечает за скрытие, отображение видео и работу таймера, **важно**: если у вас все равно работает хендлинг видео, то в любом случае перепишите код на данный подход:
-```js
-const sectionForm = document.querySelector(".section-form");
-
-function createTimer(element) {
-    const startTime = Date.now();
-    const endTime = startTime + 10 * 60 * 1000;
-    function updateTimer() {
-        const remainingTime = endTime - Date.now();
-        const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
-        const seconds = Math.floor((remainingTime / 1000) % 60);
-        const formattedTime = `${minutes
-            .toString()
-            .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-        element.textContent = formattedTime;
-        if (remainingTime <= 0) {
-            clearInterval(timerInterval);
-            element.textContent = "00:00";
-        }
-    }
-    const timerInterval = setInterval(updateTimer, 100);
-    updateTimer();
-}
-const timerElements = document.querySelectorAll(".my-timer-now");
-
-
-let video = document.querySelector("video");
-
-if (video) {
-    console.log("video найден при загрузке:", video);
-    setupVideoEvents(video);
-} else {
-    const observer = new MutationObserver(function(mutationsList) {
-        mutationsList.forEach(function(mutation) {
-            if (mutation.type === "childList") {
-                mutation.addedNodes.forEach(function(node) {
-                    if (node.tagName === "VIDEO") {
-                        console.log("video было добавлено:", node);
-                        video = node;
-                        setupVideoEvents(video);
-                    }
-                });
-            }
-        });
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-}
-
-function setEndVideo() {
-    sectionForm.classList.remove("none");
-    timerElements.forEach((element) => {
-        createTimer(element);
-    });
-    const orderElement = document.getElementById("order");
-    if (orderElement) {
-        orderElement.scrollIntoView({ behavior: "smooth" });
-    }
-}
-
-function setupVideoEvents(video) {
-    video.addEventListener("ended", function() {
-        setEndVideo();
-    });
-}
-```
-
-6. **Важно**, в консоли, у вас возможно будет ошибка `Uncaught ReferenceError: wrapper is not defined` - не обращайте внимание, это ошибка подгружаемого скрипта, но если вы заметили что у вас в коде, есть переменная с названием `wrapper`, пожалуйста, переименуйте ее **и дайте мне знать, обязательно.** Такая необходимость связана с тем, что некоторые лендинги обращаются не к своим локальным переменным, а к переменным подгружаемый из скрипта — это безусловно плохая практика, но работаем с тем, что есть.
-<img width="1624" height="1011" alt="image" src="https://github.com/user-attachments/assets/c05de423-e148-4a18-aa75-1f334412d0c5" />
-
-
-## 4. Работа с формой и отправка запроса к PP
+## 3. Работа с формой и отправка запроса к PP
 
 В лендингах отправка формы реализована по разному, но давайте попробуем все объединить в один подход:
 
