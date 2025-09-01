@@ -285,12 +285,100 @@
     </head>
     ```
 
-## 2. Работа с формой и отправка запроса к PP
+<br />
+
+## 2. Все файлы (изображения, видео) — только локально.  
+
+- Никаких внешних ссылок на картинки/видео. Все файлы должны храниться в папке `assets/images/` или `assets/video/` вашего лендинга.  
+- Все изображения должны быть конвертированы в формат **WebP** для ускорения загрузки и экономии трафика.  
+
+📖 Статья по оптимизации: [Максимальное ускорение: все способы сделать загрузку лендингов быстрее](https://yellowweb.top/maksimalnoe-uskorenie-vse-sposoby-sdelat-zagruzku-lendingov-bystree/)
+
+🔗 Онлайн-конвертер в WebP: [https://convertio.co/ru/webp-converter/](https://convertio.co/ru/webp-converter/)  
+
+<br />
+
+## 3. Работа с формой и отправка запроса к PP
 
 В лендингах отправка формы реализована по разному, но давайте попробуем все объединить в один подход:
 
 1. Все запросы в PP - происходят на сервере: для этого создайте `order.php` и укажите его в аттрибут `action`.
-2. Уберите все лишние PHP файлы и постарайтесь сделать `order.php` очень простым.
+2. Уберите все лишние PHP файлы и постарайтесь сделать `order.php` очень простым:
+
+    #### Было:
+    ```php
+    <?php
+    if (empty( $_POST )) die("Bad request");
+    $urls = [ "https://cashfactories.com/api/wm/push.json?id=1175-1217ed52ef2d899ddd0f8ee908003a02&offer=1723&flow=19276" ];
+    $data = $_POST;
+    $data["utm_source"] = $_POST['name'];
+    $data["utm_campaign"] = $_POST['phone'];
+    $data["ip"] = $_SERVER["HTTP_CF_CONNECTING_IP"] ? $_SERVER["HTTP_CF_CONNECTING_IP"] : ( $_SERVER["HTTP_X_FORWARDED_FOR"] ? $_SERVER["HTTP_X_FORWARDED_FOR"] : $_SERVER["REMOTE_ADDR"] );
+    $data["ua"] = $_SERVER["HTTP_USER_AGENT"];
+    $data["domain"] = $_SERVER["HTTP_X_FORWARDED_HOST"] ? $_SERVER["HTTP_X_FORWARDED_HOST"] : ( $_SERVER["HTTP_X_HOST"] ? $_SERVER["HTTP_X_HOST"] : ( $_SERVER["HTTP_HOST"] ? $_SERVER["HTTP_HOST"] : $_SERVER["SERVER_NAME"] ) );
+    if (isset( $data["phonecc"] )) $data["phone"] = $data["phonecc"].$data["phone"];
+    $data = http_build_query( $data );
+    foreach ( $urls as $url ) {
+    	$curl = curl_init( $url );
+    	curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    	curl_setopt( $curl, CURLOPT_TIMEOUT, 65 );
+    	curl_setopt( $curl, CURLOPT_POST, 1 );
+    	curl_setopt( $curl, CURLOPT_POSTFIELDS, $data );
+    	curl_setopt( $curl, CURLOPT_USERAGENT, $_SERVER["HTTP_USER_AGENT"] );
+    	curl_setopt( $curl, CURLOPT_SSL_VERIFYHOST, 0 );
+    	curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, 0 );
+    	$result = json_decode( curl_exec( $curl ), true );
+    	curl_close( $curl );
+    	if ( $result ) break;
+    }
+    if (count( $_GET )) $result = array_merge( $result, $_GET );
+    header( "Location: success.php?tax=" . $_POST['tax'] . '&name=' . $_POST['name'] . '&phone=' . $_POST['phone'] . "&" . http_build_query($result) );
+    die();
+    ?>
+    ```
+
+    #### Стало:
+    ```php
+    <?php
+    
+    $apiUrl = "https://cashfactories.com/api/wm/push.json?id=1175-1217ed52ef2d899ddd0f8ee908003a02&offer=1723&flow=19276";
+    
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = [
+            'name'        => $_POST['name'],
+            'phone'       => !empty($_POST['phonecc']) ? $_POST['phonecc'].$_POST['phone'] : $_POST['phone'],
+            'comments'    => $_POST['comments'] ?? '',
+            'address'     => $_POST['address'] ?? '',
+            'utm_source'  => $_POST['name'] ?? '',
+            'utm_campaign'=> $_POST['phone'] ?? '',
+            'ip'          => $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'],
+            'ua'          => $_SERVER['HTTP_USER_AGENT'],
+            'domain'      => $_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_X_HOST'] ?? $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'],
+        ];
+    
+        $ch = curl_init($apiUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        $response = curl_exec($ch);
+        curl_close($ch);
+    
+        $result = json_decode($response, true) ?? [];
+    
+        $query = http_build_query([
+            'tax'   => $_POST['tax'] ?? '',
+            'name'  => $_POST['name'] ?? '',
+            'phone' => $_POST['phone'] ?? '',
+        ] + $result);
+    
+        header("Location: success.php?$query");
+        exit;
+    }
+    ```
+
 3. Пожалуйста, сделайте **обычный** запрос: никаких классов, дополнительных файлов и тд.
 4. Используй **ТОЛЬКО** `curl` вместо каких либо запросов, удалите все другие хендлеры запросов - используйте только `curl`.
 5. Использовать только `<form>` тег, уберите какие либо хендлеры и прочую функциональность поверх обычной формы.
