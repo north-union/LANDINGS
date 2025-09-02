@@ -17,7 +17,7 @@
     ```html
     <head>
 
-        <link rel="stylesheet" type="text/css" href="css/bootstrap.css"> <!--ТУТ-->
+        <link rel="stylesheet" type="text/css" href="css/bootstrap.css">
 
     </head>
     ```
@@ -31,7 +31,7 @@
           rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
           crossorigin="anonymous"
-        /> <!--ТУТ-->
+        /> 
 
     </head>
     ```
