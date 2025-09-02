@@ -143,6 +143,9 @@
 
 🔗 Онлайн-конвертер в WebP: [https://convertio.co/ru/webp-converter/](https://convertio.co/ru/webp-converter/)  
 
+<img width="646" height="689" alt="image" src="https://github.com/user-attachments/assets/d47c7a89-d09f-4211-98f0-3bb928d873e7" />
+
+
 <br />
 
 ## 3. Изменение плеера
